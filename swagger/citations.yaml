@@ -76,7 +76,6 @@ components:
           type: string
         filename:
           type: string
-        # data field omitted in API response typically, unless specific endpoint returns binary
         contentType:
           type: string
 

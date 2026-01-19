@@ -4,9 +4,6 @@ package org.gso.profiles.dto;
 import java.net.URI;
 import java.util.List;
 
-/**
- * DTO to expose paginable results
- */
 public record PageDto<T> (
     int pageSize,
     long totalElements,

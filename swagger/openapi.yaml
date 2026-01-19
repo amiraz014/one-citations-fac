@@ -36,7 +36,6 @@ components:
       description: API Key for Kong gateway
 
   schemas:
-    # ============ Profiles Schemas ============
     ProfileDto:
       type: object
       required:
@@ -92,7 +91,6 @@ components:
             type: string
           example: ["writer", "user"]
 
-    # ============ Citations Schemas ============
     CitationResponseDto:
       type: object
       properties:
@@ -140,7 +138,6 @@ components:
           type: string
           example: "Oscar Wilde"
 
-    # ============ Images Schemas ============
     ImageResponseDto:
       type: object
       properties:
@@ -178,7 +175,6 @@ components:
           type: string
 
     # ============ Error Schemas ============
-    ErrorResponse:
       type: object
       properties:
         status:
@@ -204,7 +200,6 @@ components:
 paths:
   # ============ PROFILES ENDPOINTS ============
   /profiles:
-    get:
       tags:
         - Profiles
       summary: Search profiles with pagination
@@ -454,7 +449,6 @@ paths:
 
   # ============ IMAGES ENDPOINTS ============
   /images/random:
-    get:
       tags:
         - Images
       summary: Get a random image

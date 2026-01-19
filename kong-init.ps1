@@ -1,11 +1,7 @@
-# Script PowerShell pour configurer Kong
-# À exécuter après que Docker Compose soit lancé et Kong soit prêt
-
 $KONG_ADMIN_URL = "http://localhost:8001"
 
 Write-Host "Configuration de Kong..." -ForegroundColor Green
 
-# 1. Créer le service profiles-api
 Write-Host "Création du service profiles-api..."
 $profilesService = @{
     name = "profiles-api"
@@ -18,7 +14,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services" `
     -ContentType "application/json" `
     -Body $profilesService | Out-Null
 
-# 2. Créer les routes pour profiles-api
 Write-Host "Création des routes pour profiles-api..."
 $profilesRoute = @{
     paths = @("/api/v1/profiles")
@@ -30,7 +25,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services/profiles-api/routes" `
     -ContentType "application/json" `
     -Body $profilesRoute | Out-Null
 
-# 3. Créer le service citations-api
 Write-Host "Création du service citations-api..."
 $citationsService = @{
     name = "citations-api"
@@ -43,7 +37,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services" `
     -ContentType "application/json" `
     -Body $citationsService | Out-Null
 
-# 4. Créer les routes pour citations-api
 Write-Host "Création des routes pour citations-api..."
 $citationsRoute = @{
     paths = @("/api/v1/citations")
@@ -56,7 +49,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services/citations-api/routes" `
     -Body $citationsRoute | Out-Null
 
 # 5. Créer le service images-api
-Write-Host "Création du service images-api..."
 $imagesService = @{
     name = "images-api"
     url = "http://host.docker.internal:8084"
@@ -69,7 +61,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services" `
     -Body $imagesService | Out-Null
 
 # 6. Créer les routes pour images-api
-Write-Host "Création des routes pour images-api..."
 $imagesRoute = @{
     paths = @("/api/v1/images")
     name = "images-routes"
@@ -81,7 +72,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services/images-api/routes" `
     -Body $imagesRoute | Out-Null
 
 # 7. Activer le plugin key-auth sur les services
-Write-Host "Activation du plugin key-auth..."
 $keyAuthPlugin = @{
     name = "key-auth"
 } | ConvertTo-Json
@@ -102,7 +92,6 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/services/images-api/plugins" `
     -Body $keyAuthPlugin | Out-Null
 
 # 8. Créer un consumer 'swagger-client'
-Write-Host "Création du consumer swagger-client..."
 $consumer = @{
     username = "swagger-client"
 } | ConvertTo-Json
@@ -112,9 +101,7 @@ Invoke-WebRequest -Uri "$KONG_ADMIN_URL/consumers" `
     -ContentType "application/json" `
     -Body $consumer | Out-Null
 
-# 9. Créer une clé API pour le consumer
 Write-Host "Création d'une clé API pour swagger-client..."
-$apiKey = @{
     key = "swagger-api-key-12345"
 } | ConvertTo-Json
 

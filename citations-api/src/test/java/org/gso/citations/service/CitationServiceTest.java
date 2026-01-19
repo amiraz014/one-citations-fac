@@ -64,14 +64,11 @@ class CitationServiceTest {
 
     @Test
     void testGetRandomValidated_Success() {
-        // Arrange
         List<CitationModel> validatedCitations = Arrays.asList(validatedCitation);
         when(citationRepository.findValidated()).thenReturn(validatedCitations);
 
-        // Act
         var result = citationService.getRandomValidated();
 
-        // Assert
         assertTrue(result.isPresent());
         assertEquals("1", result.get().getId());
         assertEquals("Être ou ne pas être", result.get().getText());
@@ -80,20 +77,16 @@ class CitationServiceTest {
 
     @Test
     void testGetRandomValidated_NoValidatedCitations() {
-        // Arrange
         when(citationRepository.findValidated()).thenReturn(Arrays.asList());
 
-        // Act
         var result = citationService.getRandomValidated();
 
-        // Assert
         assertTrue(result.isEmpty());
         verify(citationRepository, times(1)).findValidated();
     }
 
     @Test
     void testSubmitCitation_Success() {
-        // Arrange
         SubmitCitationDto submitDto = new SubmitCitationDto("Une nouvelle citation", "Auteur");
         when(jwt.getSubject()).thenReturn("user123");
         when(jwt.getClaimAsString("preferred_username")).thenReturn("alice");
@@ -110,10 +103,8 @@ class CitationServiceTest {
 
         when(citationRepository.save(any(CitationModel.class))).thenReturn(savedCitation);
 
-        // Act
         CitationResponseDto result = citationService.submitCitation(submitDto, jwt);
 
-        // Assert
         assertNotNull(result);
         assertEquals("3", result.getId());
         assertEquals("Une nouvelle citation", result.getText());
@@ -124,14 +115,11 @@ class CitationServiceTest {
 
     @Test
     void testGetPendingCitations_Success() {
-        // Arrange
         List<CitationModel> pendingCitations = Arrays.asList(pendingCitation);
         when(citationRepository.findPending()).thenReturn(pendingCitations);
 
-        // Act
         List<CitationResponseDto> results = citationService.getPendingCitations();
 
-        // Assert
         assertNotNull(results);
         assertEquals(1, results.size());
         assertEquals("2", results.get(0).getId());
@@ -141,7 +129,6 @@ class CitationServiceTest {
 
     @Test
     void testValidateCitation_Success() {
-        // Arrange
         when(jwt.getSubject()).thenReturn("moderator123");
         when(jwt.getClaimAsString("preferred_username")).thenReturn("moderator");
         when(citationRepository.findById("2")).thenReturn(Optional.of(pendingCitation));
@@ -161,10 +148,8 @@ class CitationServiceTest {
 
         when(citationRepository.save(any(CitationModel.class))).thenReturn(validatedByMod);
 
-        // Act
         CitationResponseDto result = citationService.validateCitation("2", jwt);
 
-        // Assert
         assertNotNull(result);
         assertEquals("2", result.getId());
         assertEquals("moderator", result.getValidatedByUsername());
@@ -175,10 +160,8 @@ class CitationServiceTest {
 
     @Test
     void testValidateCitation_NotFound() {
-        // Arrange
         when(citationRepository.findById("999")).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
                 citationService.validateCitation("999", jwt)
         );
@@ -187,10 +170,8 @@ class CitationServiceTest {
 
     @Test
     void testValidateCitation_AlreadyValidated() {
-        // Arrange
         when(citationRepository.findById("1")).thenReturn(Optional.of(validatedCitation));
 
-        // Act & Assert
         assertThrows(IllegalStateException.class, () ->
                 citationService.validateCitation("1", jwt)
         );
@@ -199,13 +180,10 @@ class CitationServiceTest {
 
     @Test
     void testGetCitationById_Success() {
-        // Arrange
         when(citationRepository.findById("1")).thenReturn(Optional.of(validatedCitation));
 
-        // Act
         CitationResponseDto result = citationService.getCitationById("1");
 
-        // Assert
         assertNotNull(result);
         assertEquals("1", result.getId());
         assertEquals("Être ou ne pas être", result.getText());
@@ -214,13 +192,10 @@ class CitationServiceTest {
 
     @Test
     void testGetCitationById_NotFound() {
-        // Arrange
         when(citationRepository.findById("999")).thenReturn(Optional.empty());
 
-        // Act
         CitationResponseDto result = citationService.getCitationById("999");
 
-        // Assert
         assertNull(result);
         verify(citationRepository, times(1)).findById("999");
     }

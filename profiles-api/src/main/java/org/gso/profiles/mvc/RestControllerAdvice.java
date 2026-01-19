@@ -1,6 +1,5 @@
 package org.gso.profiles.mvc;
 
-import lombok.extern.slf4j.Slf4j;
 import org.gso.profiles.dto.ErrorMessage;
 import org.gso.profiles.exception.BadRequestException;
 import org.gso.profiles.exception.NotFoundException;
@@ -15,6 +14,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ControllerAdvice
@@ -38,9 +39,6 @@ public class RestControllerAdvice extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * déclare une Handler spécifique pour nos exceptions fonctionnelles
-     */
     @ExceptionHandler(NotFoundException.class)
     public final ResponseEntity<Object> handleNotFoundException(NotFoundException ex, WebRequest request) {
         return new ResponseEntity<>(ex.getErrorMessage(), ex.getHttpStatus());

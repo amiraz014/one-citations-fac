@@ -1,5 +1,4 @@
 services:
-  # ===== Authentication =====
   keycloak:
     build: ./keycloak
     environment:
@@ -13,7 +12,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ===== Database =====
   mongo:
     image: mongo:latest
     ports:
@@ -29,7 +27,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ===== API Gateway =====
   kong-db:
     image: postgres:15
     environment:
@@ -158,7 +155,6 @@ services:
       keycloak:
         condition: service_started
 
-  # ===== Image Proxy =====
   imgproxy:
     image: darthsim/imgproxy:latest
     ports:
@@ -168,33 +164,12 @@ services:
       IMGPROXY_SALT: "test-salt"
       IMGPROXY_ALLOW_INSECURE_URLS: "true"
 
-  # ===== Documentation =====
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
     container_name: swagger-ui
     environment:
-      SWAGGER_JSON: /doc/openapi.yaml
+      SWAGGER_JSON: /doc/citations.yaml
       DEEP_LINKING: "true"
-      URLS_PRIMARY_NAME: "Microservices API (via Kong)"
-      URLS: |
-        [
-          {
-            "url": "http://localhost:8000/api/v1",
-            "name": "Kong Gateway (Recommended)"
-          },
-          {
-            "url": "http://localhost:8082",
-            "name": "Profiles API Direct"
-          },
-          {
-            "url": "http://localhost:8083",
-            "name": "Citations API Direct"
-          },
-          {
-            "url": "http://localhost:8084",
-            "name": "Images API Direct"
-          }
-        ]
     ports: 
       - "8889:8080"
     volumes:

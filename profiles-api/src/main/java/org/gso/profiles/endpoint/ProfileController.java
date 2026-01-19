@@ -112,17 +112,10 @@ public class ProfileController {
             ProfileModel profile = profileService.getProfileByUserId(userId);
             return ResponseEntity.ok(profile.toDto());
         } catch (Exception e) {
-            // If profile doesn't exist, return 404
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Convertit une requête RSQL en un objet Criteria compréhensible par la base
-     *
-     * @param stringQuery
-     * @return
-     */
     private Criteria convertQuery(String stringQuery) {
         Criteria criteria;
         if (StringUtils.hasText(stringQuery)) {

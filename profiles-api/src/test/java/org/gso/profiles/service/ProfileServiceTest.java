@@ -1,6 +1,7 @@
 package org.gso.profiles.service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.gso.profiles.model.ProfileModel;
 import org.gso.profiles.repository.CustomProfileRepository;
@@ -51,11 +52,11 @@ public class ProfileServiceTest {
     public void testProfileCreation() {
         ProfileModel profileModel = ProfileModel.builder().userId("toto").build();
         ProfileModel createdProfile = ProfileModel.builder()
-                        .id("myId")
-                        .userId("toto")
-                        .created(LocalDateTime.now())
-                        .modified(LocalDateTime.now())
-                        .build();
+                .id("myId")
+                .userId("toto")
+                .created(LocalDateTime.now())
+                .modified(LocalDateTime.now())
+                .build();
         when(profileRepository.save(any())).thenReturn(createdProfile);
 
         ProfileModel result = profileService.createProfile(profileModel);

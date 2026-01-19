@@ -29,7 +29,6 @@ public class CitationModel {
     private LocalDateTime validationDate;
     private CitationStatus status;
 
-    // Constructor for new submissions
     public CitationModel(String text, String author, String submittedBy, String submittedByUsername) {
         this.text = text;
         this.author = author;
