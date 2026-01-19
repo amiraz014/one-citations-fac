@@ -1,0 +1,574 @@
+openapi: 3.0.0
+info:
+  title: One Citations - Microservices API
+  description: API Gateway pour les microservices One Citations (Profiles, Citations, Images)
+  version: 1.0.0
+  contact:
+    name: One Citations Team
+    url: https://github.com/one-citations
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: API Gateway Kong (Production)
+  - url: http://localhost:8082
+    description: Profiles API Direct
+  - url: http://localhost:8083
+    description: Citations API Direct
+  - url: http://localhost:8084
+    description: Images API Direct
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Keycloak (OAuth2)
+
+    apiKey:
+      type: apiKey
+      in: query
+      name: apikey
+      description: API Key for Kong gateway
+
+  schemas:
+    # ============ Profiles Schemas ============
+    ProfileDto:
+      type: object
+      required:
+        - userId
+        - mail
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        userId:
+          type: string
+          example: "user-123"
+        mail:
+          type: string
+          format: email
+          example: "user@example.com"
+        age:
+          type: integer
+          minimum: 13
+          example: 25
+        firstName:
+          type: string
+          example: "Jean"
+        lastName:
+          type: string
+          example: "Dupont"
+        created:
+          type: string
+          format: date-time
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CurrentUserDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: "keycloak-user-id"
+        username:
+          type: string
+          example: "john.doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["writer", "user"]
+
+    # ============ Citations Schemas ============
+    CitationResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        text:
+          type: string
+          example: "Être ou ne pas être, telle est la question"
+        author:
+          type: string
+          example: "William Shakespeare"
+        submittedByUsername:
+          type: string
+          example: "alice"
+        submissionDate:
+          type: string
+          format: date-time
+          readOnly: true
+        validatedByUsername:
+          type: string
+          nullable: true
+          example: "moderator-jane"
+        validationDate:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        status:
+          type: string
+          enum: ["PENDING", "VALIDATED"]
+          example: "VALIDATED"
+
+    SubmitCitationDto:
+      type: object
+      required:
+        - text
+        - author
+      properties:
+        text:
+          type: string
+          example: "La vie est une succession de moments que nous vivons"
+        author:
+          type: string
+          example: "Oscar Wilde"
+
+    # ============ Images Schemas ============
+    ImageResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+          example: "https://picsum.photos/1200/800?random=1"
+        resizedUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "http://imgproxy:8080/resize/800/600/0/0/BASE64_ENCODED_URL"
+        title:
+          type: string
+          example: "Random Image 1"
+        description:
+          type: string
+          example: "Lorem ipsum dolor sit amet"
+
+    ImageModel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        description:
+          type: string
+
+    # ============ Error Schemas ============
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Bad Request"
+        timestamp:
+          type: string
+          format: date-time
+
+    ValidationError:
+      type: object
+      properties:
+        field:
+          type: string
+          example: "age"
+        message:
+          type: string
+          example: "Age must be at least 13"
+
+paths:
+  # ============ PROFILES ENDPOINTS ============
+  /profiles:
+    get:
+      tags:
+        - Profiles
+      summary: Search profiles with pagination
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: RSQL query for filtering (e.g., firstName==Jean)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Page number
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 200
+          description: Page size
+      responses:
+        '200':
+          description: Profiles found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProfileDto'
+        '400':
+          description: Invalid query
+
+    post:
+      tags:
+        - Profiles
+      summary: Create a new profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileDto'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDto'
+        '400':
+          description: Validation error
+
+  /profiles/{id}:
+    get:
+      tags:
+        - Profiles
+      summary: Get profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Profile ID
+      responses:
+        '200':
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDto'
+        '404':
+          description: Profile not found
+
+    put:
+      tags:
+        - Profiles
+      summary: Update profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Profile ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileDto'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDto'
+        '404':
+          description: Profile not found
+
+  /profiles/current:
+    get:
+      tags:
+        - Profiles
+      summary: Get current user profile (from JWT)
+      description: Returns the profile of the authenticated user based on JWT subject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: User profile not found
+
+  # ============ CITATIONS ENDPOINTS ============
+  /citations/random:
+    get:
+      tags:
+        - Citations
+      summary: Get a random validated citation
+      description: Returns a random citation with VALIDATED status (public endpoint)
+      security: []
+      responses:
+        '200':
+          description: Random citation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitationResponseDto'
+        '204':
+          description: No validated citations available
+
+  /citations:
+    post:
+      tags:
+        - Citations
+      summary: Submit a new citation
+      description: Submit a new citation (requires writer role)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitCitationDto'
+      responses:
+        '201':
+          description: Citation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitationResponseDto'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+
+  /citations/pending:
+    get:
+      tags:
+        - Citations
+      summary: Get all pending citations
+      description: Returns all citations with PENDING status (requires moderator role)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of pending citations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CitationResponseDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - requires moderator role
+
+  /citations/{id}:
+    get:
+      tags:
+        - Citations
+      summary: Get citation by ID
+      description: Get a citation by its ID (public endpoint)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Citation ID
+      responses:
+        '200':
+          description: Citation found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitationResponseDto'
+        '404':
+          description: Citation not found
+
+  /citations/{id}/validate:
+    put:
+      tags:
+        - Citations
+      summary: Validate a citation
+      description: Mark a citation as VALIDATED (requires moderator role)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Citation ID
+      responses:
+        '200':
+          description: Citation validated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitationResponseDto'
+        '400':
+          description: Citation already validated
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - requires moderator role
+        '404':
+          description: Citation not found
+
+  # ============ IMAGES ENDPOINTS ============
+  /images/random:
+    get:
+      tags:
+        - Images
+      summary: Get a random image
+      description: Returns a random image with optional resizing via imgproxy (public endpoint)
+      security: []
+      parameters:
+        - name: width
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 2000
+          description: Image width in pixels
+        - name: height
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 2000
+          description: Image height in pixels
+        - name: redirect
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: If true, redirect to resized image instead of returning JSON
+      responses:
+        '200':
+          description: Random image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponseDto'
+        '301':
+          description: Redirect to resized image (if redirect=true)
+        '400':
+          description: Invalid dimensions
+
+  /images/resize:
+    get:
+      tags:
+        - Images
+      summary: Resize an image
+      description: Resize a given image URL via imgproxy (public endpoint)
+      security: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Image URL to resize
+        - name: width
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 2000
+          description: Target width
+        - name: height
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 2000
+          description: Target height
+      responses:
+        '200':
+          description: Image resize info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponseDto'
+        '400':
+          description: Invalid parameters
+
+  /images/list:
+    get:
+      tags:
+        - Images
+      summary: List all available images
+      description: Returns list of all static images available (public endpoint)
+      security: []
+      responses:
+        '200':
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImageModel'
+
+  /images/health:
+    get:
+      tags:
+        - Images
+      summary: Health check
+      description: Simple health check endpoint
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "OK"
+
+tags:
+  - name: Profiles
+    description: User profiles management
+  - name: Citations
+    description: Citations management
+  - name: Images
+    description: Image management and resizing

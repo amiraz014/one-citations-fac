@@ -1,0 +1,17 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://root:example@mongo:27017/one-citations?authSource=admin
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/one-citations
+          jwk-set-uri: http://keycloak:8080/realms/one-citations/protocol/openid-connect/certs
+server:
+  port: 8080
+
+imgproxy:
+  url: http://imgproxy:8080
+  key: test-key
+  salt: test-salt

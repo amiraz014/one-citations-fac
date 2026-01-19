@@ -1,0 +1,10 @@
+FROM alpine:latest
+
+# Installer curl
+RUN apk add --no-cache curl
+
+# Copier le script d'initialisation
+COPY kong-init.sh /kong-init.sh
+
+# Exécuter le script directement avec sh
+ENTRYPOINT ["sh", "/kong-init.sh"]

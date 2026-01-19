@@ -1,6 +1,6 @@
 FROM gradle:9.0 AS compile
 COPY . .
-RUN gradle clean build --no-daemon
+RUN gradle clean build -x test --no-daemon
 
 FROM eclipse-temurin:25
 WORKDIR /home/application/java

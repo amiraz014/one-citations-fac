@@ -22,7 +22,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -96,8 +99,22 @@ public class ProfileController {
     }
 
     @GetMapping("/current")
-    public ResponseEntity<JwtAuthenticationToken> getCurrentUserProfile(JwtAuthenticationToken principal) {
-        return ResponseEntity.ok(principal);
+    public ResponseEntity<ProfileDto> getCurrentUserProfile() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Jwt)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Jwt jwt = (Jwt) auth.getPrincipal();
+        String userId = jwt.getSubject();
+        
+        try {
+            ProfileModel profile = profileService.getProfileByUserId(userId);
+            return ResponseEntity.ok(profile.toDto());
+        } catch (Exception e) {
+            // If profile doesn't exist, return 404
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**

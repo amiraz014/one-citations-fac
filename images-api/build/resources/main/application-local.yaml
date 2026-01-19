@@ -1,0 +1,17 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/one-citations
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/one-citations
+          jwk-set-uri: http://localhost:8081/realms/one-citations/protocol/openid-connect/certs
+server:
+  port: 8084
+
+imgproxy:
+  url: http://localhost:8888
+  key: test-key
+  salt: test-salt

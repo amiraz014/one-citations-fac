@@ -1,4 +1,5 @@
 services:
+  # ===== Authentication =====
   keycloak:
     build: ./keycloak
     environment:
@@ -6,29 +7,204 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: keycloak
     ports:
       - 8080:8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Database =====
   mongo:
-    image: mongo
+    image: mongo:latest
     ports:
       - "27017:27017"
-  profile:
-    build: ./profiles-api
-    ports:
-      - 9080:8080
     environment:
-      spring_profiles_active: security,docker
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== API Gateway =====
+  kong-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kong-migration:
+    image: kong:3.7.1
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
     depends_on:
-      - mongo
-  swagger:
-    image: swaggerapi/swagger-ui
+      kong-db:
+        condition: service_healthy
+
+  kong:
+    image: kong:3.7.1
     environment:
-      SWAGGER_JSON: /doc/citations.yaml
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"  # Proxy
+      - "8001:8001"  # Admin API
+    depends_on:
+      kong-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  konga:
+    image: pantsel/konga:latest
+    environment:
+      NODE_ENV: production
+      DB_ADAPTER: postgres
+      DB_HOST: kong-db
+      DB_USER: kong
+      DB_PASSWORD: kong
+      DB_DATABASE: konga
+    ports:
+      - "1337:1337"
+    depends_on:
+      - kong
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kong-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.kong-init
+    depends_on:
+      kong:
+        condition: service_healthy
+    environment:
+      - KONG_ADMIN_URL=http://kong:8001
+
+  # ===== Microservices =====
+  profiles-api:
+    image: one-citations-profiles-api:latest
+    container_name: profiles-api
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://root:example@mongo:27017/one-citations?authSource=admin
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/one-citations
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/one-citations/protocol/openid-connect/certs
+    depends_on:
+      mongo:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  citations-api:
+    image: one-citations-citations-api:latest
+    container_name: citations-api
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://root:example@mongo:27017/one-citations?authSource=admin
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/one-citations
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/one-citations/protocol/openid-connect/certs
+    depends_on:
+      mongo:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  images-api:
+    image: one-citations-images-api:latest
+    container_name: images-api
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://root:example@mongo:27017/one-citations?authSource=admin
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/one-citations
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/one-citations/protocol/openid-connect/certs
+    depends_on:
+      mongo:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  # ===== Image Proxy =====
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    ports:
+      - "8888:8080"
+    environment:
+      IMGPROXY_KEY: "test-key"
+      IMGPROXY_SALT: "test-salt"
+      IMGPROXY_ALLOW_INSECURE_URLS: "true"
+
+  # ===== Documentation =====
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swagger-ui
+    environment:
+      SWAGGER_JSON: /doc/openapi.yaml
       DEEP_LINKING: "true"
-      OAUTH2_REDIRECT_URL: http://localhost:8888/oauth2-redirect.html
-      OAUTH_CLIENT_ID: swagger
-      OAUTH_USE_PKCE: "true"  
-      OAUTH_REALM: tindeer
-      OAUTH_APP_NAME: swagger
+      URLS_PRIMARY_NAME: "Microservices API (via Kong)"
+      URLS: |
+        [
+          {
+            "url": "http://localhost:8000/api/v1",
+            "name": "Kong Gateway (Recommended)"
+          },
+          {
+            "url": "http://localhost:8082",
+            "name": "Profiles API Direct"
+          },
+          {
+            "url": "http://localhost:8083",
+            "name": "Citations API Direct"
+          },
+          {
+            "url": "http://localhost:8084",
+            "name": "Images API Direct"
+          }
+        ]
     ports: 
-      - 8888:8080
+      - "8889:8080"
     volumes:
       - ./swagger:/doc
+    depends_on:
+      - keycloak
+      - kong
+    networks:
+      - default
+
+volumes:
+  mongo_data:
+  kong_data:
